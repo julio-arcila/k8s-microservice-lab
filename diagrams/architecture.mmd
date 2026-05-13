@@ -1,0 +1,41 @@
+graph TB
+    subgraph "k3d Cluster (ai)"
+        subgraph "kube-system"
+            DNS["coredns<br/>DNS Resolution"]
+            METRICS["metrics-server<br/>Resource Monitoring"]
+        end
+        
+        subgraph "app Namespace"
+            FRONTEND["Frontend Pod<br/>Nginx Alpine<br/>Port 80<br/>Limits: 64Mi/250m"]
+            BACKEND["Backend Pod<br/>Flask Python<br/>Port 5000<br/>Limits: 128Mi/500m"]
+            DB["Postgres Pod<br/>PostgreSQL 18<br/>Port 5432<br/>Limits: 256Mi/500m"]
+        end
+        
+        SVC_FE["Service: frontend-svc<br/>Type: NodePort<br/>Port: 80<br/>NodePort: 30080"]
+        SVC_BE["Service: backend-svc<br/>Type: ClusterIP<br/>Port: 5000"]
+        SVC_DB["Service: postgres-svc<br/>Type: ClusterIP<br/>Port: 5432"]
+        
+        PVC["PersistentVolumeClaim<br/>postgres-pvc<br/>1Gi"]
+    end
+    
+    USER["👤 Developer"] -->|"http://localhost:30080"| SVC_FE
+    SVC_FE -->|"kube-proxy"| FRONTEND
+    FRONTEND -->|"/api/tasks"| SVC_BE
+    SVC_BE --> BACKEND
+    BACKEND -->|"SELECT/INSERT"| SVC_DB
+    SVC_DB --> DB
+    DB --> PVC
+    
+    FRONTEND -.- DNS
+    BACKEND -.- DNS
+    METRICS -.-> FRONTEND
+    METRICS -.-> BACKEND
+    METRICS -.-> DB
+    
+    style USER fill:#4CAF50,color:#fff
+    style FRONTEND fill:#2196F3,color:#fff
+    style BACKEND fill:#FF9800,color:#fff
+    style DB fill:#9C27B0,color:#fff
+    style SVC_FE fill:#607D8B,color:#fff
+    style SVC_BE fill:#607D8B,color:#fff
+    style SVC_DB fill:#607D8B,color:#fff
